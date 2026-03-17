@@ -1,4 +1,3 @@
-# 本代码块为初始化代码，运行一次即可。多次运行可能报错，若报错可以点击 jupyter 界面中的 ⟳ 按钮重启 python 进程。
 import smbus2 as smbus
 import RPi.GPIO as GPIO
 from apds9960.const import *
@@ -19,3 +18,10 @@ GPIO.add_event_detect(7, GPIO.FALLING, callback = intH)
 
 apds.setProximityIntLowThreshold(50)
 apds.enableProximitySensor()
+import time
+
+
+for i in range(30):
+    val = apds.readProximity()
+    print("Proximity value:", val)
+    time.sleep(1.0)
