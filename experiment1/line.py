@@ -55,6 +55,7 @@ def sensor_thread():
         else:
             if hand_detected.is_set():
                 hand_detected.clear()
+            print(f"当前人手离开，检测值: {val}")
         time.sleep(0.05)  # 20Hz 采样率
 
 # --- 线程 2：LED 响应线程 ---
@@ -68,12 +69,13 @@ def led_thread():
     try:
         while not exit_signal.is_set():
             if hand_detected.is_set():
-                # 响应模式：随机跳动且颜色变亮
+                # 响应模式：地鼠所在灯光格亮灰灯
                 pixels = [(0, 0, 0)] * LED_COUNT
-                random_pos = random.randint(0, LED_COUNT - 1)
-                pixels[random_pos] = (50, 50, 50) # 亮白色响应
+                # 计算当前地鼠位置 (current_pos 是下一帧的位置，所以需要回退一格)
+                hit_pos = (current_pos - 1 + LED_COUNT) % LED_COUNT
+                pixels[hit_pos] = (30, 30, 30) # 灰灯响应
                 led.send(pixels)
-                time.sleep(0.05)
+                time.sleep(0.2)
             else:
                 # 常规模式：平滑跑马灯 (来自 RGB.ipynb 逻辑)
                 pixels = [(0, 0, 0)] * LED_COUNT
