@@ -55,7 +55,10 @@ def sensor_thread():
         else:
             if hand_detected.is_set():
                 hand_detected.clear()
-            print(f"当前人手离开，检测值: {val}")
+            counter += 1
+            if(counter % 4 == 0):   
+                print(f"当前人手离开，检测值: {val}")
+
         time.sleep(0.05)  # 20Hz 采样率
 
 # --- 线程 2：LED 响应线程 ---
