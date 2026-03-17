@@ -45,6 +45,7 @@ def sensor_thread():
     bus = smbus.SMBus(I2C_PORT)
     apds = APDS9960(bus)
     apds.enableProximitySensor()
+    counter = 0
 
     while not exit_signal.is_set():
         val = apds.readProximity()
