@@ -20,25 +20,74 @@
 
 ## 第 1 步：部署并启动 NanoMQ（云端）
 
-1. 将 `nanomq_quic_sample.conf` 拷贝到云端，例如 `/etc/nanomq/nanomq.conf`，并按需修改端口/证书：
-   - TCP：`mqtt.tcp_listen = "0.0.0.0:1883"`
-   - QUIC：`quic_listen = "quic://0.0.0.0:14567"`
-   - 内网实验可暂时 `verify_peer = false`；有证书时填写 `certfile/keyfile/cafile`。
+### 使用清华源从源码编译 NanoMQ（Ubuntu 22.04）
 
-2. 启动 Broker：
+1. 可选：apt 切换清华源（如已有内网源可跳过）
+
+  ```bash
+  sudo cp /etc/apt/sources.list /etc/apt/sources.list.bak
+  sudo tee /etc/apt/sources.list >/dev/null <<'EOF'
+  deb https://mirrors.tuna.tsinghua.edu.cn/ubuntu/ jammy main restricted universe multiverse
+  deb https://mirrors.tuna.tsinghua.edu.cn/ubuntu/ jammy-updates main restricted universe multiverse
+  deb https://mirrors.tuna.tsinghua.edu.cn/ubuntu/ jammy-backports main restricted universe multiverse
+  deb https://mirrors.tuna.tsinghua.edu.cn/ubuntu/ jammy-security main restricted universe multiverse
+  EOF
+  sudo apt update
+  ```
+
+2. 安装编译依赖
+
+  ```bash
+  sudo apt install -y build-essential cmake git libssl-dev
+  ```
+
+3. 从清华 Git 镜像克隆并编译
+
+  ```bash
+  git clone https://mirrors.tuna.tsinghua.edu.cn/git/nanomq.git
+  cd nanomq
+  mkdir -p build && cd build
+  cmake ..
+  make -j$(nproc)
+  ```
+
+4. 启动（示例，使用本仓库提供的配置）
+
+  ```bash
+  # 假设你已将 nanomq_quic_sample.conf 拷贝到 /etc/nanomq/nanomq.conf 并按需调整端口/证书
+  ./nanomq start -c /etc/nanomq/nanomq.conf
+  ```
+
+5. 防火墙放行与监听校验
+
+  ```bash
+  sudo ufw allow 1883/tcp
+  sudo ufw allow 14567/udp
+  sudo netstat -lnpt | grep nano
+  ```
+
+### 配置要点（回顾）
+
+1. 将 `nanomq_quic_sample.conf` 拷贝到云端，例如 `/etc/nanomq/nanomq.conf`，并按需修改端口/证书：
+
+- TCP：`mqtt.tcp_listen = "0.0.0.0:1883"`
+- QUIC：`quic_listen = "quic://0.0.0.0:14567"`
+- 内网实验可暂时 `verify_peer = false`；有证书时填写 `certfile/keyfile/cafile`。
+
+1. 启动 Broker：
 
    ```bash
    ./nanomq start -c /etc/nanomq/nanomq.conf
    ```
 
-3. 防火墙放行：
+1. 防火墙放行：
 
    ```bash
    sudo ufw allow 1883/tcp
    sudo ufw allow 14567/udp
    ```
 
-4. 验证监听：
+1. 验证监听：
 
    ```bash
    sudo netstat -lnpt | grep nano
