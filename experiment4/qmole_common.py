@@ -133,6 +133,10 @@ class NanoMQCliSub(threading.Thread):
                 line = line.strip()
                 if not line:
                     continue
+                # Skip nanomq_cli status/debug lines (not MQTT payload)
+                if not line.startswith("{") and not line.startswith("["):
+                    print(f"[QUIC sub info] {line}", flush=True)
+                    continue
                 try:
                     # Many MQTT CLIs print raw payload only
                     self.on_message(self.topic, line)
