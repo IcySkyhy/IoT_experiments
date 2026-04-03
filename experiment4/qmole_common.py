@@ -29,9 +29,6 @@ except ImportError:  # pragma: no cover
 # Configuration
 # --------------------------
 NANOMQ_CLI_DEFAULT = os.environ.get("NANOMQ_CLI", "./nanomq_cli")
-# Adjust these templates if your nanomq_cli uses different flags.
-NANOMQ_PUB_CMD = "{cli} pub -h {host} -p {port} -t {topic} -m {message} --quic -q {qos}"
-NANOMQ_SUB_CMD = "{cli} sub -h {host} -p {port} -t {topic} --quic -q {qos}"
 
 
 @dataclass
@@ -114,17 +111,22 @@ class NanoMQCliSub(threading.Thread):
         self._stop = threading.Event()
 
     def run(self):
-        cmd = NANOMQ_SUB_CMD.format(
-            cli=NANOMQ_CLI_DEFAULT,
-            host=self.cfg.broker,
-            port=self.cfg.quic_port,
-            topic=self.topic,
-            qos=self.cfg.qos,
-        ).split()
+        cmd = [
+            NANOMQ_CLI_DEFAULT,
+            "sub",
+            "-h", self.cfg.broker,
+            "-p", str(self.cfg.quic_port),
+            "-t", self.topic,
+            "-q", str(self.cfg.qos),
+            "-l",
+            "--quic",
+        ]
+        print(f"[QUIC sub] starting: {' '.join(cmd)}", flush=True)
         try:
-            self.proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+            self.proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=None, text=True)
             if not self.proc.stdout:
                 return
+            print(f"[QUIC sub] process started, waiting for messages on {self.topic}", flush=True)
             for line in self.proc.stdout:
                 if self._stop.is_set():
                     break
@@ -150,15 +152,18 @@ class NanoMQCliSub(threading.Thread):
 
 
 def nanomq_cli_pub(cfg: TransportConfig, topic: str, payload: str):
-    cmd = NANOMQ_PUB_CMD.format(
-        cli=NANOMQ_CLI_DEFAULT,
-        host=cfg.broker,
-        port=cfg.quic_port,
-        topic=topic,
-        message=json.dumps(payload) if isinstance(payload, (dict, list)) else payload,
-        qos=cfg.qos,
-    ).split()
-    subprocess.run(cmd, check=False)
+    msg = json.dumps(payload) if isinstance(payload, (dict, list)) else str(payload)
+    cmd = [
+        NANOMQ_CLI_DEFAULT,
+        "pub",
+        "-h", cfg.broker,
+        "-p", str(cfg.quic_port),
+        "-t", topic,
+        "-q", str(cfg.qos),
+        "-l",
+        "--quic",
+    ]
+    subprocess.run(cmd, input=msg + "\n", text=True, check=False)
 
 
 class QuicClient:

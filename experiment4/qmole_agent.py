@@ -121,10 +121,13 @@ def main():
 
     agent_id = args.id
     topic_self = f"mole/activate/{agent_id}"
+    print(f"[{agent_id}] 连接 broker={args.broker}, 模式={args.transport}", flush=True)
     transport.subscribe(topic_self)
+    print(f"[{agent_id}] 已订阅 {topic_self}，等待地鼠激活消息...", flush=True)
 
     hb = Heartbeat(transport, agent_id, interval=HEARTBEAT_INTERVAL)
     hb.start()
+    print(f"[{agent_id}] 心跳已启动，Agent 就绪。", flush=True)
 
     is_active = False
     current_score = 0
