@@ -118,12 +118,12 @@ class NanoMQCliSub(threading.Thread):
             "-p", str(self.cfg.quic_port),
             "-t", self.topic,
             "-q", str(self.cfg.qos),
-            "-l",
             "--quic",
         ]
         print(f"[QUIC sub] starting: {' '.join(cmd)}", flush=True)
         try:
-            self.proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=None, text=True)
+            self.proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=None,
+                                         stdin=subprocess.DEVNULL, text=True)
             if not self.proc.stdout:
                 return
             print(f"[QUIC sub] process started, waiting for messages on {self.topic}", flush=True)
