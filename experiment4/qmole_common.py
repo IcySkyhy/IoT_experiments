@@ -173,10 +173,10 @@ def nanomq_cli_pub(cfg: TransportConfig, topic: str, payload: str):
         "-p", str(cfg.quic_port),
         "-t", topic,
         "-q", str(cfg.qos),
-        "-l",
+        "-m", msg,
         "--quic",
     ]
-    subprocess.run(cmd, input=msg + "\n", text=True, check=False,
+    subprocess.run(cmd, check=False,
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
