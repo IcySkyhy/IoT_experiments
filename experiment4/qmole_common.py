@@ -176,7 +176,8 @@ def nanomq_cli_pub(cfg: TransportConfig, topic: str, payload: str):
         "-l",
         "--quic",
     ]
-    subprocess.run(cmd, input=msg + "\n", text=True, check=False)
+    subprocess.run(cmd, input=msg + "\n", text=True, check=False,
+                   stderr=subprocess.DEVNULL)
 
 
 class QuicClient:
