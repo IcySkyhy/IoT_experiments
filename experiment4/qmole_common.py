@@ -122,7 +122,8 @@ class NanoMQCliSub(threading.Thread):
         ]
         print(f"[QUIC sub] starting: {' '.join(cmd)}", flush=True)
         try:
-            self.proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=None,
+            self.proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                         stderr=subprocess.DEVNULL,
                                          stdin=subprocess.DEVNULL, text=True)
             if not self.proc.stdout:
                 return
