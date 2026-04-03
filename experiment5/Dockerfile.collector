@@ -1,0 +1,19 @@
+# Dockerfile.collector — 选做任务: 分数收集 + Web 展示
+# 构建: sudo docker build -t exp5-collector:latest -f Dockerfile.collector .
+# 运行: sudo docker run --rm -p 8080:8080 -e BROKER_IP=10.0.0.1 exp5-collector:latest
+
+FROM python:3.7-slim
+
+WORKDIR /app
+
+RUN pip3 install --no-cache-dir \
+    -i https://pypi.tuna.tsinghua.edu.cn/simple \
+    paho-mqtt>=1.6.1
+
+COPY src/score_collector.py /app/
+
+ENV BROKER_IP=10.0.0.1
+
+EXPOSE 8080
+
+CMD ["python3", "score_collector.py", "--web-port", "8080"]

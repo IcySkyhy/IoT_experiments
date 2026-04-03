@@ -1,0 +1,63 @@
+# K8s Deployment — 实验五打地鼠 (exp5.yaml)
+# 部署: kubectl apply -f exp5.yaml
+# 删除: kubectl delete -f exp5.yaml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: exp5
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: exp5
+  template:
+    metadata:
+      labels:
+        app: exp5
+    spec:
+      tolerations:
+      - key: "key1"
+        operator: "Equal"
+        value: "value1"
+        effect: "NoSchedule"
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                    - exp5
+              topologyKey: "kubernetes.io/hostname"
+      containers:
+      - name: exp5
+        image: 10.0.0.1:5000/exp5:latest
+        imagePullPolicy: Always
+        volumeMounts:
+        - mountPath: /dev/i2c-1
+          name: dev-i2c-1
+        securityContext:
+          privileged: true
+        env:
+          - name: BROKER_IP
+            value: "10.0.0.1"
+          - name: TRANSPORT
+            value: "mqtt"
+          - name: MY_POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: MY_POD_IP
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+          - name: MY_NODE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
+      volumes:
+      - name: dev-i2c-1
+        hostPath:
+          path: /dev/i2c-1
