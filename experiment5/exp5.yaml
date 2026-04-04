@@ -36,8 +36,8 @@ spec:
         image: 10.0.0.1:5000/exp5:latest
         imagePullPolicy: Always
         volumeMounts:
-        - mountPath: /dev/i2c-1
-          name: dev-i2c-1
+        - mountPath: /dev/i2c-5
+          name: dev-i2c-5
         securityContext:
           privileged: true
         env:
@@ -58,6 +58,6 @@ spec:
               fieldRef:
                 fieldPath: spec.nodeName
       volumes:
-      - name: dev-i2c-1
+      - name: dev-i2c-5
         hostPath:
-          path: /dev/i2c-1
+          path: /dev/i2c-5

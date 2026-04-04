@@ -102,9 +102,10 @@ Docker 单机测试时的入口。调用 qmole_single.py，可通过环境变量
 
 #### [A] Dockerfile — 主镜像构建文件
 
-- 基于 python:3.7 基础镜像。
-- 通过清华 pip 源安装 Python 依赖（paho-mqtt, smbus2, spidev, apds9960, rpi_ws281x），不安装 RPi.GPIO。
-- 复制 libmsquic.so.2 到容器的 /usr/lib/（支持 QUIC 通信）。
+- 基于 **python:3.10-slim** 基础镜像（适配 Ubuntu 22.04 AArch64）。
+- 通过清华 pip 源安装 Python 依赖（paho-mqtt, smbus2, spidev, apds9960），**不安装 rpi_ws281x**（仅适用于树莓派，RDK 不兼容）。
+- 复制 libmsquic.so.2.3.5 到容器，创建符号链接 libmsquic.so.2，支持 QUIC 通信。
+- 复制 nanomq_cli（64-bit AArch64 版）到容器的 /app/ 并添加可执行权限。
 - 复制 src/ 下所有代码到容器的 /app/。
 - 默认入口为 entrypoint.sh（完整版）。
 
@@ -121,7 +122,7 @@ Docker 单机测试时的入口。调用 qmole_single.py，可通过环境变量
 
 - **tolerations**: 容忍 key1=value1:NoSchedule 标记。
 - **podAntiAffinity**: 确保每个 RDK 节点上只运行 1 个 Pod（不同 Pod 必须在不同 hostname 上）。
-- 容器以 privileged 模式运行，映射 /dev/i2c-1 设备（传感器需要）。
+- 容器以 privileged 模式运行，映射 /dev/i2c-5 设备（RDK I2C bus 5，传感器需要）。
 - 通过环境变量注入 BROKER_IP、TRANSPORT、MY_POD_NAME、MY_POD_IP、MY_NODE_NAME。
 
 #### [D] exp5-collector.yaml — 选做任务 K8s 部署文件
@@ -139,10 +140,10 @@ Docker 单机测试时的入口。调用 qmole_single.py，可通过环境变量
 
 | 设备 | 说明 | VPN IP |
 |------|------|--------|
-| 云服务器 | Ubuntu 22.04，运行 MQTT broker (NanoMQ/EMQX)、k3s server | 10.0.0.1 |
-| RDK-1 (pi1) | RDK X5，带 APDS9960 传感器 + WS2812 LED | 10.0.0.2 |
-| RDK-2 (pi2) | RDK X5，带 APDS9960 传感器 + WS2812 LED | 10.0.0.3 |
-| RDK-3 (pi3) | RDK X5，带 APDS9960 传感器 + WS2812 LED | 10.0.0.4 |
+| 云服务器 | Ubuntu 22.04 x86_64，运行 EMQX broker、k3s server | 10.0.0.1 |
+| RDK-1 (pi1) | RDK X5，**Ubuntu 22.04 AArch64**，带 APDS9960 传感器 + WS2812 LED | 10.0.0.2 |
+| RDK-2 (pi2) | RDK X5，**Ubuntu 22.04 AArch64**，带 APDS9960 传感器 + WS2812 LED | 10.0.0.3 |
+| RDK-3 (pi3) | RDK X5，**Ubuntu 22.04 AArch64**，带 APDS9960 传感器 + WS2812 LED | 10.0.0.4 |
 
 > 如果你的 IP 或节点名称不同，请在下方所有命令中做对应替换。
 
@@ -162,54 +163,44 @@ ssh pi@10.0.0.2
 
 #### 步骤 1.2：安装 Docker
 
-**方式一：官方脚本安装（推荐先试这个）**
+RDK 运行 Ubuntu 22.04 AArch64，使用阿里云镜像安装 Docker（`download.docker.com` 在国内访问不稳定）：
 
 ```bash
-curl -fsSL https://get.docker.com -o get-docker.sh
-sudo sh get-docker.sh
+sudo apt-get update
+sudo apt-get install -y ca-certificates curl
+sudo install -m 0755 -d /etc/apt/keyrings
+
+# 从阿里云镜像获取 GPG key（替代 download.docker.com）
+sudo curl -fsSL https://mirrors.aliyun.com/docker-ce/linux/ubuntu/gpg \
+     -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+# 添加阿里云 Docker 软件源
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] \
+  https://mirrors.aliyun.com/docker-ce/linux/ubuntu \
+  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+sudo apt-get update
+sudo apt-get install -y docker-ce docker-ce-cli containerd.io \
+     docker-buildx-plugin docker-compose-plugin
 ```
 
-**方式二：清华源手动安装（如果方式一报错"不支持 Raspbian Buster"）**
-
-先修改 APT 源：
+如果拉取失败，配置镜像加速（可选）：
 
 ```bash
-sudo vim /etc/apt/sources.list
-```
-
-将内容替换为：
-
-```text
-deb http://mirrors.tuna.tsinghua.edu.cn/raspbian/raspbian/ buster main non-free contrib rpi
-deb-src http://mirrors.tuna.tsinghua.edu.cn/raspbian/raspbian/ buster main non-free contrib rpi
-```
-
-保存退出（Vim 操作：按 Esc，输入 :wq，回车）。
-
-安装依赖工具：
-
-```bash
-sudo apt update
-sudo apt install -y apt-transport-https ca-certificates curl gnupg2
-```
-
-添加 Docker GPG 密钥：
-
-```bash
-curl -fsSL https://download.docker.com/linux/debian/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-```
-
-添加 Docker 清华源：
-
-```bash
-echo "deb [arch=armhf signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://mirrors.tuna.tsinghua.edu.cn/docker-ce/linux/debian buster stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-```
-
-安装 Docker：
-
-```bash
-sudo apt update
-sudo apt install -y docker-ce docker-ce-cli containerd.io
+sudo tee /etc/docker/daemon.json <<'EOF'
+{
+  "registry-mirrors": [
+    "https://docker.mirrors.ustc.edu.cn",
+    "https://docker.nju.edu.cn",
+    "https://docker.m.daocloud.io"
+  ]
+}
+EOF
+sudo systemctl daemon-reload
+sudo systemctl restart docker
 ```
 
 验证安装：
@@ -218,58 +209,19 @@ sudo apt install -y docker-ce docker-ce-cli containerd.io
 sudo docker run --rm hello-world
 ```
 
-如果看到 "Hello from Docker!" 则安装成功。如果报错拉取镜像失败，需要配置 Docker 镜像加速器（参考实验四指导书）。
+如果看到 "Hello from Docker!" 则安装成功。
 
-#### 步骤 1.3：解决时间同步问题
-
-添加 testing 仓库：
+#### 步骤 1.3：非 root 用户使用 Docker
 
 ```bash
-echo "deb http://raspbian.raspberrypi.org/raspbian/ testing main" | sudo tee -a /etc/apt/sources.list
-```
-
-设置 testing 仓库低优先级：
-
-```bash
-echo 'Package: *
-Pin: release a=testing
-Pin-Priority: 150' | sudo tee /etc/apt/preferences.d/testing
-```
-
-更新并安装新版 libseccomp2：
-
-```bash
-sudo apt update
-sudo apt install libseccomp2/testing
-```
-
-如果上面报错，手动下载安装：
-
-```bash
-wget http://archive.raspbian.org/raspbian/pool/main/libs/libseccomp/libseccomp2_2.5.4-1%2Brpi1%2Bdeb12u1_armhf.deb
-sudo dpkg -i libseccomp2_2.5.4-1+rpi1+deb12u1_armhf.deb
-```
-
-#### 步骤 1.4：测试时间同步
-
-```bash
-sudo docker run --rm ubuntu date
-date
-```
-
-对比这两个时间输出，如果相差在几秒内则时间同步正常。
-
-#### 步骤 1.5：非 root 用户使用 Docker
-
-```bash
-sudo usermod -aG docker pi
+sudo usermod -aG docker $USER
 ```
 
 **退出 SSH 并重新登录**（这一步必须做，否则组更改不会生效）：
 
 ```bash
 exit
-ssh pi@10.0.0.2
+ssh root@10.0.0.2
 ```
 
 验证不需要 sudo 就能运行 docker：
@@ -280,7 +232,7 @@ docker ps
 
 如果不报 "permission denied" 则配置成功。
 
-> **重要**: 以上步骤 1.2 ~ 1.5 需要在 pi1、pi2、pi3 每台 RDK 上都执行一遍。
+> **重要**: 以上步骤 1.2 ~ 1.3 需要在 pi1、pi2、pi3 每台 RDK 上都执行一遍。
 
 ---
 
@@ -293,7 +245,7 @@ docker ps
 在你的 **本地电脑（Windows PowerShell）** 上执行：
 
 ```powershell
-scp -r "C:\Users\12447\Desktop\交叉\hajicar\experiment\experiment5" pi@10.0.0.2:~/
+scp -r "C:\Users\10935\Desktop\Experiment\experiment\experiment5" root@10.0.0.2:~/
 ```
 
 > 如果 scp 速度慢，也可以使用 WinSCP 等图形化工具。
@@ -301,23 +253,34 @@ scp -r "C:\Users\12447\Desktop\交叉\hajicar\experiment\experiment5" pi@10.0.0.
 #### 步骤 2.2：SSH 连接到 pi1
 
 ```bash
-ssh pi@10.0.0.2
+ssh root@10.0.0.2
 ```
 
-#### 步骤 2.3：确保 libmsquic.so.2 存在
+#### 步骤 2.3：准备 QUIC 相关文件
+
+从实验四目录（或本地）复制 64-bit AArch64 版 QUIC 库和客户端：
 
 ```bash
 cd ~/experiment5
-ls -la libmsquic.so.2
+# 如果实验四已上传到同目录:
+cp ~/experiment4/libmsquic.so.2.3.5 ./
+cp ~/experiment4/nanomq_cli ./
+chmod +x nanomq_cli
 ```
 
-如果文件不存在，从实验四目录复制：
+如果本地已有文件，在 **本地电脑** 上 scp：
+
+```powershell
+scp "C:\Users\10935\Desktop\Experiment\experiment\experiment4\libmsquic.so.2.3.5" root@10.0.0.2:~/experiment5/
+scp "C:\Users\10935\Desktop\Experiment\experiment\experiment4\nanomq_cli" root@10.0.0.2:~/experiment5/
+```
+
+验证文件是 64-bit AArch64：
 
 ```bash
-cp ~/experiment4/libmsquic.so.2 ~/experiment5/
+file ~/experiment5/nanomq_cli
+# 应输出: ELF 64-bit LSB executable, ARM aarch64
 ```
-
-> 如果实验四的目录路径不同，请调整为你的实际路径。
 
 #### 步骤 2.4：确认文件结构完整
 
@@ -328,7 +291,7 @@ ls ~/experiment5/
 应看到：
 
 ```text
-Dockerfile  Dockerfile.collector  exp5-collector.yaml  exp5.yaml  libmsquic.so.2  README.md  src
+Dockerfile  Dockerfile.collector  exp5-collector.yaml  exp5.yaml  libmsquic.so.2.3.5  nanomq_cli  README.md  src
 ```
 
 ```bash
@@ -355,7 +318,7 @@ Successfully built xxxxxxxxxxxx
 Successfully tagged exp5:latest
 ```
 
-首次构建约 5-10 分钟（主要是下载 Python 3.7 基础镜像和 pip 安装依赖）。后续修改代码后重新构建会很快（Docker 缓存机制）。
+首次构建约 5-10 分钟（主要是下载 python:3.10-slim 基础镜像和 pip 安装依赖）。后续修改代码后重新构建会很快（Docker 缓存机制）。
 
 #### 步骤 2.6：验证镜像已构建
 
@@ -421,7 +384,7 @@ ping -c 3 10.0.0.1
 
 ```bash
 sudo docker run --rm --privileged \
-    --device /dev/i2c-1:/dev/i2c-1 \
+    --device /dev/i2c-5:/dev/i2c-5 \
     -e BROKER_IP=10.0.0.1 \
     --name exp5-test \
     exp5:latest bash entrypoint_single.sh
@@ -433,8 +396,8 @@ sudo docker run --rm --privileged \
 |------|------|
 | docker run | 启动新容器 |
 | --rm | 容器退出后自动删除 |
-| --privileged | 赋予容器访问所有设备的权限（GPIO/SPI/I2C） |
-| --device /dev/i2c-1:/dev/i2c-1 | 将 I2C 设备映射到容器内（APDS9960 传感器需要） |
+| --privileged | 赋予容器访问所有设备的权限（SPI/I2C） |
+| --device /dev/i2c-5:/dev/i2c-5 | 将 I2C 设备映射到容器内（RDK 使用 I2C bus 5，APDS9960 传感器需要） |
 | -e BROKER_IP=10.0.0.1 | 设置环境变量，指定 MQTT broker 地址 |
 | --name exp5-test | 给容器命名为 exp5-test |
 | exp5:latest | 使用刚才构建的镜像 |
@@ -593,53 +556,51 @@ sudo cat /var/lib/rancher/k3s/server/node-token
 K10xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx::server:xxxxxxxxxxxxxxxx
 ```
 
-##### 步骤 4.1.6：在每台 RDK 上启用 cgroup
+##### 步骤 4.1.6：在每台 RDK 上确认 cgroup 已启用
 
 > 操作设备: **每台 RDK（pi1, pi2, pi3）**，以下以 pi1 为例。
 
-```bash
-ssh pi@10.0.0.2
-```
-
-编辑启动文件：
+RDK X5（Ubuntu 22.04）通常已默认启用 cgroup，先验证：
 
 ```bash
-sudo vim /boot/cmdline.txt
+cat /proc/cgroups | grep memory
 ```
 
-在文件 **已有内容的末尾**（同一行上，前面加一个空格）添加：
+如果输出中 `memory` 行的第 4 列为 `1`，表示已启用，**无需额外操作**，直接进入步骤 4.1.7。
+
+如果第 4 列为 `0`（未启用），编辑 grub 配置：
+
+```bash
+sudo vim /etc/default/grub
+```
+
+找到 `GRUB_CMDLINE_LINUX` 行，在引号内末尾添加：
 
 ```text
  cgroup_memory=1 cgroup_enable=memory
 ```
 
-> **重要**: cmdline.txt 整个文件的内容必须在同一行上，不要换行！
+例如原来是 `GRUB_CMDLINE_LINUX=""` 则改为：
 
-保存退出后重启 RDK：
+```text
+GRUB_CMDLINE_LINUX="cgroup_memory=1 cgroup_enable=memory"
+```
+
+保存退出后更新 grub 并重启：
 
 ```bash
+sudo update-grub
 sudo reboot
 ```
 
-等待 1-2 分钟后重新 SSH 连接：
+等待 1-2 分钟后重新 SSH 连接，重新启动 VPN（如果没有配置为开机自启）：
 
 ```bash
-ssh pi@10.0.0.2
-```
-
-重新启动 VPN：
-
-```bash
-sudo wg-quick up wg0
-```
-
-验证 VPN 连通：
-
-```bash
+sudo systemctl start wg-quick@wg0
 ping -c 3 10.0.0.1
 ```
 
-> **以上步骤 4.1.6 需要在 pi1、pi2、pi3 每台 RDK 上都执行一遍**，每台都要 reboot 并重连。
+> **以上步骤 4.1.6 需要在 pi1、pi2、pi3 每台 RDK 上都验证/执行一遍**，每台都要重连并重新确认 VPN 连通。
 
 ##### 步骤 4.1.7：在每台 RDK 上安装 k3s agent
 
@@ -685,25 +646,24 @@ curl -sfL https://rancher-mirror.oss-cn-beijing.aliyuncs.com/k3s/k3s-install.sh 
 
 **方式二：离线安装（如果在线方式失败）**
 
-在 RDK 上（或先在本地下载再 scp 上传）：
+在 RDK 上或在本地电脑下载后 scp 上传：
 
 ```bash
 wget https://rancher-mirror.rancher.cn/k3s/k3s-install.sh
-wget https://rancher-mirror.rancher.cn/k3s/v1.30.2-k3s2/k3s-armhf
+wget https://rancher-mirror.rancher.cn/k3s/v1.30.2-k3s2/k3s-arm64
 ```
 
 如果 RDK 无法下载，在本地电脑下载后 scp 到 RDK：
 
 ```powershell
-scp k3s-install.sh k3s-armhf pi@10.0.0.2:~/
+scp k3s-install.sh k3s-arm64 root@10.0.0.2:~/
 ```
 
 然后在 RDK 上：
 
 ```bash
-sudo chmod a+x ./k3s-armhf ./k3s-install.sh
-sudo cp ./k3s-armhf /usr/local/bin
-sudo mv /usr/local/bin/k3s-armhf /usr/local/bin/k3s
+sudo chmod a+x ./k3s-arm64 ./k3s-install.sh
+sudo cp ./k3s-arm64 /usr/local/bin/k3s
 INSTALL_K3S_MIRROR=cn \
     K3S_URL=https://10.0.0.1:6443 \
     K3S_TOKEN=<Token> \
@@ -855,7 +815,7 @@ kubectl taint nodes server key1=value1:NoSchedule
 在 **本地电脑（Windows PowerShell）** 上：
 
 ```powershell
-scp "C:\Users\12447\Desktop\交叉\hajicar\experiment\experiment5\exp5.yaml" root@<云服务器公网IP>:~/
+scp "C:\Users\10935\Desktop\Experiment\experiment\experiment5\exp5.yaml" root@<云服务器公网IP>:~/
 ```
 
 或者在云服务器上用 vim 创建 exp5.yaml，粘贴 exp5.yaml 文件的完整内容。
@@ -911,8 +871,8 @@ pip3 install paho-mqtt
 
 ```powershell
 # 在本地电脑上执行
-scp "C:\Users\12447\Desktop\交叉\hajicar\experiment\experiment5\src\qmole_trigger.py" root@<云服务器公网IP>:~/
-scp "C:\Users\12447\Desktop\交叉\hajicar\experiment\experiment5\src\qmole_common.py" root@<云服务器公网IP>:~/
+scp "C:\Users\10935\Desktop\Experiment\experiment\experiment5\src\qmole_trigger.py" root@<云服务器公网IP>:~/
+scp "C:\Users\10935\Desktop\Experiment\experiment\experiment5\src\qmole_common.py" root@<云服务器公网IP>:~/
 ```
 
 在云服务器上运行 trigger：
@@ -990,7 +950,7 @@ kubectl apply -f ~/exp5.yaml
 
 ```bash
 sudo docker run --rm --privileged \
-    --device /dev/i2c-1:/dev/i2c-1 \
+    --device /dev/i2c-5:/dev/i2c-5 \
     -e BROKER_IP=10.0.0.1 \
     --name exp5-test \
     exp5:latest bash entrypoint_single.sh
@@ -1066,7 +1026,7 @@ kubectl logs -l app=exp5 --all-containers --prefix -f
 
 ```bash
 sudo docker run -d --privileged \
-    --device /dev/i2c-1:/dev/i2c-1 \
+    --device /dev/i2c-5:/dev/i2c-5 \
     -e BROKER_IP=10.0.0.1 \
     --name exp5-mem \
     exp5:latest bash entrypoint_single.sh
@@ -1177,7 +1137,7 @@ curl http://10.0.0.1:5000/v2/_catalog
 在 **本地电脑（Windows PowerShell）** 上：
 
 ```powershell
-scp "C:\Users\12447\Desktop\交叉\hajicar\experiment\experiment5\exp5-collector.yaml" root@<云服务器公网IP>:~/
+scp "C:\Users\10935\Desktop\Experiment\experiment\experiment5\exp5-collector.yaml" root@<云服务器公网IP>:~/
 ```
 
 #### 步骤 S1.3：部署分数收集器

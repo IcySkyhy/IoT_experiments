@@ -2,4 +2,4 @@ paho-mqtt>=1.6.1
 smbus2
 spidev
 apds9960
-rpi_ws281x
+# rpi_ws281x 为树莓派专用，RDK 上不安装
