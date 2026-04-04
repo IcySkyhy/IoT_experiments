@@ -21,6 +21,8 @@ spec:
         operator: "Equal"
         value: "value1"
         effect: "NoSchedule"
+      nodeSelector:
+        role: rdk
       affinity:
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:

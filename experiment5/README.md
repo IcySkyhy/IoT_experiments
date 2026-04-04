@@ -825,7 +825,7 @@ scp "C:\Users\10935\Desktop\Experiment\experiment\experiment5\exp5.yaml" root@<�
 > 操作设备: **云服务器**。
 
 ```bash
-kubectl apply -f ~/exp5.yaml
+kubectl apply -f exp5.yaml
 ```
 
 **预期输出**：
@@ -878,7 +878,7 @@ scp "C:\Users\10935\Desktop\Experiment\experiment\experiment5\src\qmole_common.p
 在云服务器上运行 trigger：
 
 ```bash
-python3 ~/qmole_trigger.py --broker 10.0.0.1 --target 1
+python3 qmole_trigger.py --broker 10.0.0.1 --target 1
 ```
 
 **预期输出**：
@@ -932,8 +932,8 @@ sudo docker push 10.0.0.1:5000/exp5
 在云服务器上：
 
 ```bash
-kubectl delete -f ~/exp5.yaml
-kubectl apply -f ~/exp5.yaml
+kubectl delete -f exp5.yaml
+kubectl apply -f exp5.yaml
 ```
 
 ---
@@ -1000,7 +1000,7 @@ kubectl get pods -o wide
 **步骤 2**: 发送 trigger 触发游戏
 
 ```bash
-python3 ~/qmole_trigger.py --broker 10.0.0.1 --target 1
+python3 qmole_trigger.py --broker 10.0.0.1 --target 1
 ```
 
 **步骤 3**: 观察日志
@@ -1145,7 +1145,7 @@ scp "C:\Users\10935\Desktop\Experiment\experiment\experiment5\exp5-collector.yam
 > 操作设备: **云服务器**
 
 ```bash
-kubectl apply -f ~/exp5-collector.yaml
+kubectl apply -f exp5-collector.yaml
 ```
 
 **预期输出**：
