@@ -4,13 +4,20 @@
 # 运行(完整版):   sudo docker run --rm --privileged --device /dev/i2c-5:/dev/i2c-5 -e BROKER_IP=10.0.0.1 exp5:latest
 
 # python:3.10-slim 匹配 Ubuntu 22.04 系统 Python 版本，体积更小
-FROM python:3.10-slim
+# 使用 DaoCloud 镜像加速（docker.io 在国内访问不稳定）
+FROM docker.m.daocloud.io/library/python:3.10-slim
 
 # 设置工作目录
 WORKDIR /app
 
 # 设置 pip 清华源加速
 RUN pip3 config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
+
+# 安装编译工具（spidev 是 C 扩展，需要 gcc）及运行时依赖
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    python3-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 # 安装 Python 依赖
 # 注意: 不安装 rpi_ws281x（树莓派专用，RDK 上不可用）
