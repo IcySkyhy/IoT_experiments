@@ -2,13 +2,13 @@
 # 构建: sudo docker build -t exp5-collector:latest -f Dockerfile.collector .
 # 运行: sudo docker run --rm -p 8080:8080 -e BROKER_IP=10.0.0.1 exp5-collector:latest
 
-FROM python:3.7-slim
+FROM docker.m.daocloud.io/library/python:3.10-slim
 
 WORKDIR /app
 
 RUN pip3 install --no-cache-dir \
     -i https://pypi.tuna.tsinghua.edu.cn/simple \
-    paho-mqtt>=1.6.1
+    "paho-mqtt>=1.6.1,<2.0"
 
 COPY src/score_collector.py /app/
 
