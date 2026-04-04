@@ -308,14 +308,14 @@ entrypoint.sh  entrypoint_single.sh  qmole_agent.py  qmole_common.py  qmole_sing
 
 ```bash
 cd ~/experiment5
-sudo docker build -t exp5:latest .
+sudo docker build -t hajicar_exp5:latest .
 ```
 
 **预期输出**：构建过程逐步执行 Dockerfile 中的每条指令。最后几行应显示：
 
 ```text
 Successfully built xxxxxxxxxxxx
-Successfully tagged exp5:latest
+Successfully tagged hajicar_exp5:latest
 ```
 
 首次构建约 5-10 分钟（主要是下载 python:3.10-slim 基础镜像和 pip 安装依赖）。后续修改代码后重新构建会很快（Docker 缓存机制）。
@@ -387,7 +387,7 @@ sudo docker run --rm --privileged \
     --device /dev/i2c-5:/dev/i2c-5 \
     -e BROKER_IP=10.0.0.1 \
     --name exp5-test \
-    exp5:latest bash entrypoint_single.sh
+    hajicar_exp5:latest bash entrypoint_single.sh
 ```
 
 **命令各部分解释**：
@@ -400,7 +400,7 @@ sudo docker run --rm --privileged \
 | --device /dev/i2c-5:/dev/i2c-5 | 将 I2C 设备映射到容器内（RDK 使用 I2C bus 5，APDS9960 传感器需要） |
 | -e BROKER_IP=10.0.0.1 | 设置环境变量，指定 MQTT broker 地址 |
 | --name exp5-test | 给容器命名为 exp5-test |
-| exp5:latest | 使用刚才构建的镜像 |
+| hajicar_exp5:latest | 使用刚才构建的镜像 |
 | bash entrypoint_single.sh | 覆盖默认入口，使用单机版入口脚本 |
 
 **预期输出**：
@@ -434,7 +434,7 @@ sudo docker run --rm \
     -e BROKER_IP=10.0.0.1 \
     -e MOCK=1 \
     --name exp5-test \
-    exp5:latest bash entrypoint_single.sh
+    hajicar_exp5:latest bash entrypoint_single.sh
 ```
 
 模拟模式下不需要 --privileged 和 --device，输出中会显示 `传感器: 模拟` 和 `LED: 模拟`。
@@ -666,8 +666,8 @@ sudo chmod a+x ./k3s-arm64 ./k3s-install.sh
 sudo cp ./k3s-arm64 /usr/local/bin/k3s
 INSTALL_K3S_MIRROR=cn \
     K3S_URL=https://10.0.0.1:6443 \
-    K3S_TOKEN=<在步骤4.1.5中获取的Token> \
-    K3S_NODE_NAME=pi1 \
+    K3S_TOKEN=K101129e886a00337322e1f19e161a6f5d7edcb905fae145dda707fb02500997cc2::server:937b212264b07ddaf9632c1b766ba8ef \
+    K3S_NODE_NAME=pi3 \
     INSTALL_K3S_SKIP_DOWNLOAD=true \
     ./k3s-install.sh
 ```
@@ -723,7 +723,7 @@ docker ps | grep registry
 编辑 Docker 配置文件：
 
 ```bash
-sudo vim /etc/docker/daemon.json
+sudo nano /etc/docker/daemon.json
 ```
 
 写入以下内容（如果文件已有其他内容，在 JSON 对象中添加这一项）：
@@ -740,7 +740,7 @@ sudo vim /etc/docker/daemon.json
 
 ```bash
 sudo mkdir -p /etc/rancher/k3s
-sudo vim /etc/rancher/k3s/registries.yaml
+sudo nano /etc/rancher/k3s/registries.yaml
 ```
 
 写入以下内容：
@@ -773,10 +773,10 @@ sudo systemctl restart k3s-agent.service
 cd ~/experiment5
 
 # 1. 构建镜像（如果之前已构建且代码未改动，可跳过此步）
-sudo docker build -t exp5:latest .
+sudo docker build -t hajicar_exp5:latest .
 
 # 2. 给镜像打上 registry 地址标签
-sudo docker tag exp5:latest 10.0.0.1:5000/exp5
+sudo docker tag hajicar_exp5:latest 10.0.0.1:5000/exp5
 
 # 3. 推送镜像到 registry
 sudo docker push 10.0.0.1:5000/exp5
@@ -924,8 +924,8 @@ kubectl logs -l app=exp5 --all-containers --prefix -f
 ```bash
 # 编辑代码...
 cd ~/experiment5
-sudo docker build -t exp5:latest .
-sudo docker tag exp5:latest 10.0.0.1:5000/exp5
+sudo docker build -t hajicar_exp5:latest .
+sudo docker tag hajicar_exp5:latest 10.0.0.1:5000/exp5
 sudo docker push 10.0.0.1:5000/exp5
 ```
 
@@ -953,7 +953,7 @@ sudo docker run --rm --privileged \
     --device /dev/i2c-5:/dev/i2c-5 \
     -e BROKER_IP=10.0.0.1 \
     --name exp5-test \
-    exp5:latest bash entrypoint_single.sh
+    hajicar_exp5:latest bash entrypoint_single.sh
 ```
 
 **验收标准**:
@@ -1029,7 +1029,7 @@ sudo docker run -d --privileged \
     --device /dev/i2c-5:/dev/i2c-5 \
     -e BROKER_IP=10.0.0.1 \
     --name exp5-mem \
-    exp5:latest bash entrypoint_single.sh
+    hajicar_exp5:latest bash entrypoint_single.sh
 ```
 
 > 这里用了 `-d` 让容器在后台运行。
