@@ -553,7 +553,7 @@ sudo cat /var/lib/rancher/k3s/server/node-token
 **将输出的 Token 完整复制保存**，后面 RDK 加入集群时需要。Token 格式类似：
 
 ```text
-K10xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx::server:xxxxxxxxxxxxxxxx
+K101129e886a00337322e1f19e161a6f5d7edcb905fae145dda707fb02500997cc2::server:937b212264b07ddaf9632c1b766ba8ef
 ```
 
 ##### 步骤 4.1.6：在每台 RDK 上确认 cgroup 已启用
@@ -614,7 +614,7 @@ ping -c 3 10.0.0.1
 curl -sfL https://rancher-mirror.oss-cn-beijing.aliyuncs.com/k3s/k3s-install.sh | \
     INSTALL_K3S_MIRROR=cn \
     K3S_URL=https://10.0.0.1:6443 \
-    K3S_TOKEN=<在步骤4.1.5中获取的Token> \
+    K3S_TOKEN=K101129e886a00337322e1f19e161a6f5d7edcb905fae145dda707fb02500997cc2::server:937b212264b07ddaf9632c1b766ba8ef \
     K3S_NODE_NAME=pi1 \
     sh -
 ```
@@ -666,7 +666,7 @@ sudo chmod a+x ./k3s-arm64 ./k3s-install.sh
 sudo cp ./k3s-arm64 /usr/local/bin/k3s
 INSTALL_K3S_MIRROR=cn \
     K3S_URL=https://10.0.0.1:6443 \
-    K3S_TOKEN=<Token> \
+    K3S_TOKEN=<在步骤4.1.5中获取的Token> \
     K3S_NODE_NAME=pi1 \
     INSTALL_K3S_SKIP_DOWNLOAD=true \
     ./k3s-install.sh
