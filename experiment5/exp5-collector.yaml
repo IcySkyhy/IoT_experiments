@@ -36,6 +36,8 @@ spec:
         env:
           - name: BROKER_IP
             value: "10.0.0.1"
+          - name: PYTHONUNBUFFERED
+            value: "1"
 
 ---
 # Service: NodePort 对外暴露 Web 页面

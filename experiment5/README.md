@@ -1055,6 +1055,10 @@ sudo docker stop exp5-mem
 sudo docker rm exp5-mem
 ```
 
+```bash
+sudo kubectl top pods
+```
+
 #### 步骤 B：测量直接运行的内存占用
 
 **SSH 窗口 1** — 直接运行 Python 程序：
@@ -1145,7 +1149,7 @@ scp "C:\Users\10935\Desktop\Experiment\experiment\experiment5\exp5-collector.yam
 > 操作设备: **云服务器**
 
 ```bash
-kubectl apply -f exp5-collector.yaml
+sudo kubectl apply -f exp5-collector.yaml
 ```
 
 **预期输出**：
@@ -1176,7 +1180,7 @@ exp5-collector-yyyyyy-zzzzz       1/1     Running   server
 查看 collector Pod 日志：
 
 ```bash
-kubectl logs $(kubectl get pods -l app=exp5-collector -o name)
+sudo kubectl logs $(sudo kubectl get pods -l app=exp5-collector -o name)
 ```
 
 应看到：
@@ -1265,7 +1269,7 @@ http://<云服务器公网IP>:30080/api/state
 #### 步骤 S2.4：查看 Collector 日志
 
 ```bash
-kubectl logs -f $(kubectl get pods -l app=exp5-collector -o name)
+sudo kubectl logs -f $(sudo kubectl get pods -l app=exp5-collector -o name)
 ```
 
 ---
@@ -1335,3 +1339,23 @@ pi1:       docker build -f Dockerfile.collector → docker tag → docker push
 云服务器:  kubectl apply -f exp5-collector.yaml
 浏览器:   http://<公网IP>:30080
 ```
+
+sudo systemctl stop k3s-agent
+sudo systemctl daemon-reload
+sudo systemctl start k3s-agent
+
+
+sudo systemctl stop k3s-agent
+sudo sed -i 's|^K3S_TOKEN=.*|K3S_TOKEN="K101bcb281a39b0c2e235ac5ee7d741430399be63cad77fca2d18b4dff55f4ca51c::server:937b212264b07ddaf9632c1b766ba8ef"|' /etc/systemd/system/k3s-agent.service.env 2>/dev/null || \
+  sudo sed -i 's|K3S_TOKEN=.*|K3S_TOKEN=K101bcb281a39b0c2e235ac5ee7d741430399be63cad77fca2d18b4dff55f4ca51c::server:937b212264b07ddaf9632c1b766ba8ef|' /etc/rancher/k3s/config.yaml 2>/dev/null
+sudo systemctl daemon-reload
+sudo systemctl start k3s-agent
+
+
+sudo kubectl label node pi1 pi2 pi3 role=rdk --overwrite
+sudo kubectl taint nodes server key1=value1:NoSchedule --overwrite
+sudo kubectl apply -f ~/experiment/experiment5/exp5.yaml
+sudo kubectl apply -f ~/experiment/experiment5/exp5-collector.yaml
+
+
+sudo kubectl describe pod exp5-5c79d889d7-5nkrf
